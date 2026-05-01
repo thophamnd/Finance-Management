@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # 1. Khởi tạo Database MySQL
+  mysql-db:
+    image: mysql:8.0
+    container_name: architect-mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: the_architect_db
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  # 2. Khởi tạo Backend Spring Boot
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: architect-backend
+    restart: on-failure
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql-db
+    environment:
+      # Cấu hình đè để Spring Boot kết nối vào container MySQL thay vì localhost
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/the_architect_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+
+  # 3. Khởi tạo Frontend React
+  frontend:
+    build:
+      context: ./my-finance-app
+      dockerfile: Dockerfile
+    container_name: architect-frontend
+    restart: always
+    ports:
+      - "3000:80" # Map port 3000 trên máy thật vào port 80 của Nginx
+    depends_on:
+      - backend
+
+# Khai báo volume để dữ liệu database không bị mất khi tắt Docker
+volumes:
+  mysql_data:
